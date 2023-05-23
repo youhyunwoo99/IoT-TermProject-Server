@@ -135,108 +135,154 @@ app.post('/findPosition', (req, res) => {
 });
 
 app.post('/dijkstra', (req, res) => {
-    const data1 = req.body.data1;
-    const data2 = req.body.data2;
-
+    const data1 = req.body.start;
+    const data2 = req.body.end;
     
-    const { distances, path } = dijkstra(graph, data1, data2);
-    res.send(path);
+    const { distancePath, path, direction } = getPathDescription(data1, data2);
+    
+    res.send({
+      distance: distancePath,
+      path: path,
+      direction: direction
+  });
 });
 
 class Graph {
-    constructor() {
-      this.edges = {}; // 연결 정보를 저장할 객체
+  constructor() {
+    this.edges = {}; // 연결 정보를 저장할 객체
+  }
+
+  addEdge(source, destination, weight) {
+    // 간선 정보를 추가하는 메서드
+    if (!this.edges[source]) {
+      this.edges[source] = {};
     }
-  
-    addEdge(source, destination, weight) {
-      // 간선 정보를 추가하는 메서드
-      if (!this.edges[source]) {
-        this.edges[source] = {};
-      }
-      this.edges[source][destination] = weight;
-  
-      if (!this.edges[destination]) {
-        this.edges[destination] = {};
-      }
+    this.edges[source][destination] = weight;
+
+    if (!this.edges[destination]) {
+      this.edges[destination] = {};
+    }
       this.edges[destination][source] = weight;
-    }
-  
-    addNode(node) {
-      // 노드를 추가하는 메서드
-      if (!this.edges[node]) {
-        this.edges[node] = {};
-      }
+    
+  }
+
+  addNode(node) {
+    // 노드를 추가하는 메서드
+    if (!this.edges[node]) {
+      this.edges[node] = {};
     }
   }
-  
-  const graph = new Graph();
-  
-  function dijkstra(graph, start, end) {
-    const distances = {};
+
+  getDistance(source, destination) {
+    if (!this.edges[source] || !this.edges[destination]) {
+      return -1; // 노드가 존재하지 않는 경우 -1 반환
+    }
+    
+    const queue = [];
     const visited = new Set();
-    const unvisited = new Set(Object.keys(graph.edges));
-    const previous = {};
-  
-    // 시작 노드의 거리를 Infinity로 초기화
-    Object.keys(graph.edges).forEach((node) => {
-      distances[node] = Infinity;
-    });
-  
-    // 시작 노드의 거리를 0으로 초기화
-    distances[start] = 0;
-  
-    // 가장 가까운 노드를 선택하는 함수
-    function getClosestNode(unvisited, distances) {
-      let closestNode;
-      for (const node of unvisited) {
-        if (distances[node] !== Infinity) {
-          if (!closestNode) {
-            closestNode = node;
-          } else if (distances[node] < distances[closestNode]) {
-            closestNode = node;
-          }
-        }
+    const distance = {};
+
+    queue.push(source);
+    distance[source] = 0;
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+
+      if (current === destination) {
+        return distance[current]; // 목적지에 도달한 경우 거리 반환
       }
-      return closestNode;
-    }
-  
-    while (unvisited.size > 0) {
-      // 현재까지의 최단 거리를 가진 노드를 선택
-      const currentNode = getClosestNode(unvisited, distances);
-      unvisited.delete(currentNode);
-      visited.add(currentNode);
-  
-      // 도착 노드에 도달하면 반복 종료
-      if (currentNode === end) {
-        break;
-      }
-  
-      // 현재 노드와 연결된 노드들의 거리를 업데이트
-      for (const neighbor in graph.edges[currentNode]) {
+
+      visited.add(current);
+
+      for (const neighbor in this.edges[current]) {
         if (!visited.has(neighbor)) {
-          const distance = distances[currentNode] + graph.edges[currentNode][neighbor];
-          if (distance < distances[neighbor]) {
-            distances[neighbor] = distance;
-            previous[neighbor] = currentNode;
-          }
+          queue.push(neighbor);
+          distance[neighbor] = distance[current] + this.edges[current][neighbor];
         }
       }
     }
-  
-    // 최단 경로 추적
-    const path = [end];
-    let currentNode = end;
-    while (currentNode !== start) {
-      currentNode = previous[currentNode];
-      path.unshift(currentNode);
-    }
-  
-    return {
-      distances,
-      path
-    };
+
+    return -1; // 목적지에 도달할 수 없는 경우 -1 반환
   }
-  
+
+}
+
+const graph = new Graph();
+
+// 다익스트라 알고리즘 함수 (시작과 끝 노드 고려)
+function dijkstra(graph, start, end) {
+const distances = {};
+const visited = new Set();
+const unvisited = new Set(Object.keys(graph.edges));
+const previous = {};
+
+// 시작 노드의 거리를 Infinity로 초기화
+Object.keys(graph.edges).forEach((node) => {
+  distances[node] = Infinity;
+});
+
+// 시작 노드의 거리를 0으로 초기화
+distances[start] = 0;
+
+// 가장 가까운 노드를 선택하는 함수
+function getClosestNode(unvisited, distances) {
+  let closestNode;
+  for (const node of unvisited) {
+    if (distances[node] !== Infinity) {
+      if (!closestNode) {
+        closestNode = node;
+      } else if (distances[node] < distances[closestNode]) {
+        closestNode = node;
+      }
+    }
+  }
+  return closestNode;
+}
+
+while (unvisited.size > 0) {
+  // 현재까지의 최단 거리를 가진 노드를 선택
+  const currentNode = getClosestNode(unvisited, distances);
+  unvisited.delete(currentNode);
+  visited.add(currentNode);
+
+  // 도착 노드에 도달하면 반복 종료
+  if (currentNode === end) {
+    break;
+  }
+
+  // 현재 노드와 연결된 노드들의 거리를 업데이트
+  for (const neighbor in graph.edges[currentNode]) {
+    if (!visited.has(neighbor)) {
+      const distance = distances[currentNode] + graph.edges[currentNode][neighbor];
+      if (distance < distances[neighbor]) {
+        distances[neighbor] = distance;
+        previous[neighbor] = currentNode;
+      }
+    }
+  }
+}
+
+// 최단 경로 추적
+const path = [end];
+let currentNode = end;
+let distancePath = []; // 노드 간의 거리를 저장하는 배열
+
+while (currentNode !== start) {
+  const prevNode = previous[currentNode];
+  const distance = graph.edges[prevNode][currentNode];
+  path.unshift(prevNode);
+  distancePath.unshift(distance);
+  currentNode = prevNode;
+}
+
+return {
+  distances,
+  path,
+  distancePath
+};
+}
+
+
 // 예시 그래프 생성
 graph.addNode("401호");
 graph.addNode("402호");
@@ -304,8 +350,8 @@ graph.addEdge("406호", "407호", 7);
 graph.addEdge("407호", "407호 - KEA 라운지", 13);
 graph.addEdge("407호", "4층 제 3 계단", 3);
 
-graph.addEdge("407호", "408호", 1);
 graph.addEdge("408호", "407호", 6.5);
+graph.addEdge("407호", "408호", 1);
 
 graph.addEdge("408호", "409호", 6.5);
 graph.addEdge("409호", "410호", 6.5);
@@ -322,11 +368,13 @@ graph.addEdge("416호", "417호", 3);
 graph.addEdge("417호", "418호", 3);
 graph.addEdge("418호", "419호", 3);
 graph.addEdge("419호", "420호", 3);
+graph.addEdge("419호", "4층 제 2 엘리베이터 1호", 5);
+
 graph.addEdge("421호", "422호", 3);
 graph.addEdge("423호", "424호", 3);
 graph.addEdge("424호", "425호", 3);
 graph.addEdge("425호", "4층 아르테크네", 3);
-graph.addEdge("4층 아르테크네", "4층 제 1 엘리베이터", 3);
+graph.addEdge("4층 아르테크네", "4층 제 1 엘리베이터", 4);
 graph.addEdge("4층 제 1 엘리베이터", "4층 제 1 계단", 2);
 graph.addEdge("4층 제 1 계단", "426호", 1);
 graph.addEdge("426호", "427호", 3);
@@ -360,19 +408,25 @@ graph.addEdge("4층 여자 장애인 화장실", "421호", 2);
 
 
 
-graph.addEdge("4층 제 2 여자화장실", "408호", 3);
-graph.addEdge("4층 제 2 남자화장실", "408호", 3);
+graph.addEdge("4층 제 2 여자화장실", "408호", 3.5);
+graph.addEdge("4층 제 2 남자화장실", "408호", 3.5);
+graph.addEdge("408호", "4층 제 2 남자화장실", 7);
 
 graph.addEdge("4층 제 2 여자화장실", "409호", 4);
-graph.addEdge("4층 제 2 남자화장실", "409호", 3);
+graph.addEdge("4층 제 2 남자화장실", "409호", 3.5);
 
 graph.addEdge("4층 제 2 여자화장실", "4층 제 3계단", 2);
 graph.addEdge("4층 제 2 남자화장실", "410호", 4);
-graph.addEdge("410호", "4층 제 2 남자화장실", 4);
+graph.addEdge("410호", "4층 제 2 남자화장실", 7);
 
 graph.addEdge("4층 제 3 계단", "408호", 3);
 
 
+
+graph.addEdge("434호", "4층 제 2 엘리베이터 2호", 4);
+graph.addEdge("426호", "4층 아르테크네", 7);
+graph.addEdge("426호", "425호", 7);
+graph.addEdge("425호", "4층 제 1 계단", 6);
 
 
 graph.addEdge("4층 제 2 엘리베이터 1호", "418호", 3);
@@ -382,6 +436,7 @@ graph.addEdge("4층 제 2 엘리베이터 1호", "4층 제 2 엘리베이터 2�
 
 graph.addEdge("4층 제 3 엘리베이터 1호", "4층 제 3 엘리베이터 2호", 1);
 graph.addEdge("4층 제 3 엘리베이터 1호", "410호", 4);
+graph.addEdge("4층 제 3 엘리베이터 1호", "409호", 5);
 graph.addEdge("4층 제 3 엘리베이터 1호", "411호 - KEA", 7);
 graph.addEdge("4층 제 3 엘리베이터 1호", "4층 제 4 계단", 7);
 
@@ -418,11 +473,11 @@ graph.addNode("504호");
 graph.addNode("505호");
 graph.addNode("506호");
 graph.addNode("507호");
-graph.addNode("507호 - KEA 라운지");
+graph.addNode("IT융합대학 조교실");
 graph.addNode("508호");
 graph.addNode("509호");
 graph.addNode("510호");
-graph.addNode("511호 - KEA");
+graph.addNode("511호");
 graph.addNode("512호");
 graph.addNode("513호");
 graph.addNode("514호");
@@ -474,7 +529,7 @@ graph.addEdge("505호", "506호", 10);
 
 graph.addEdge("506호", "5층 제 3 계단", 6);
 graph.addEdge("506호", "507호", 7);
-graph.addEdge("507호", "507호 - KEA 라운지", 13);
+graph.addEdge("507호", "IT융합대학 조교실", 13);
 graph.addEdge("507호", "5층 제 3 계단", 3);
 
 graph.addEdge("507호", "508호", 1);
@@ -482,12 +537,18 @@ graph.addEdge("508호", "507호", 6.5);
 
 graph.addEdge("508호", "509호", 6.5);
 graph.addEdge("509호", "510호", 6.5);
-graph.addEdge("510호", "511호 - KEA", 6.5);
-graph.addEdge("411호 - KEA", "5층 제 4 계단", 2.5);
+graph.addEdge("510호", "511호", 6.5);
+graph.addEdge("511호", "5층 제 4 계단", 2.5);
 graph.addEdge("5층 제 4 계단", "512호" ,2.5);
 graph.addEdge("512호", "513호", 10);
 graph.addEdge("513호", "514호", 10);
+graph.addEdge("513호", "503호", 14);
+graph.addEdge("513호", "504호", 13);
+
 graph.addEdge("514호", "515호", 6.5);
+graph.addEdge("514호", "503호", 13);
+graph.addEdge("514호", "504호", 14);
+
 graph.addEdge("515호", "5층 제 5 계단", 1);
 graph.addEdge("5층 제 5 계단", "416호", 2);
 graph.addEdge("516호", "5층 제 5 계단", 4);
@@ -533,11 +594,14 @@ graph.addEdge("5층 여자 장애인 화장실", "521호", 2);
 
 
 
-graph.addEdge("5층 제 2 여자화장실", "508호", 3);
-graph.addEdge("5층 제 2 남자화장실", "508호", 3);
+graph.addEdge("5층 제 2 여자화장실", "508호", 3.5);
+graph.addEdge("5층 제 2 남자화장실", "508호", 3.5);
+
+graph.addEdge("510호", "5층 제 2 남자화장실", 7);
 
 graph.addEdge("5층 제 2 여자화장실", "509호", 4);
-graph.addEdge("5층 제 2 남자화장실", "509호", 3);
+graph.addEdge("5층 제 2 남자화장실", "509호", 3.5);
+graph.addEdge("510호", "5층 제 2 남자화장실", 7);
 
 graph.addEdge("5층 제 2 여자화장실", "5층 제 3계단", 2);
 graph.addEdge("5층 제 2 남자화장실", "450호", 4);
@@ -545,6 +609,10 @@ graph.addEdge("510호", "5층 제 2 남자화장실", 4);
 
 graph.addEdge("5층 제 3 계단", "508호", 3);
 
+graph.addEdge("534호", "5층 제 2 엘리베이터 2호", 4);
+graph.addEdge("526호", "5층 아르테크네", 8);
+graph.addEdge("526호", "525호", 7);
+graph.addEdge("525호", "5층 제 1 계단", 6);
 
 
 
@@ -555,7 +623,8 @@ graph.addEdge("5층 제 2 엘리베이터 1호", "5층 제 2 엘리베이터 2�
 
 graph.addEdge("5층 제 3 엘리베이터 1호", "5층 제 3 엘리베이터 2호", 1);
 graph.addEdge("5층 제 3 엘리베이터 1호", "510호", 4);
-graph.addEdge("5층 제 3 엘리베이터 1호", "511호 - KEA", 7);
+graph.addEdge("4층 제 3 엘리베이터 1호", "509호", 5);
+graph.addEdge("5층 제 3 엘리베이터 1호", "511호", 7);
 graph.addEdge("5층 제 3 엘리베이터 1호", "5층 제 4 계단", 7);
 
 graph.addEdge("5층 제 3 엘리베이터 2호", "512호", 6);
@@ -565,6 +634,124 @@ graph.addEdge("5층 제 3 엘리베이터 2호", "505호", 22);
 graph.addEdge("5층 제 3 엘리베이터 2호", "504호", 23);
 graph.addEdge("504호", "5층 제 3 엘리베이터 2호", 33);
 graph.addEdge("512호", "5층 제 3 엘리베이터 2호", 7);
+
+const map = new Map();
+
+//좌회전
+map['4층 제 3 엘리베이터 2호:405호'] = -1
+map['4층 제 3 엘리베이터 1호:4층 제 3 엘리베이터 2호'] = -1
+map['4층 제 3 계단:406호'] = -1
+map['406호:4층 제 3 엘리베이터 2호'] = -1
+map['407호:406호'] = -1
+map['411호:410호'] = -1
+map['4층 제 3 엘리베이터 2호:412호'] = -1
+map['412호:4층 제 3 엘리베이터 2호'] = -1
+map['4층 제 2 엘리베이터 2호:433호'] = -1
+map['4층 제 3 엘리베이터 2호:413호'] = -1
+
+map['4층 제 2 엘리베이터 1호:418호'] = -1
+map['434호:4층 제 2 엘리베이터 2호'] = -1
+map['419호:4층 제 2 엘리베이터 1호'] = -1
+map['426호:4층 아르테크네'] = -1
+map['426호:425호'] = -1
+map['4층 제 1 계단:425호'] = -1
+
+map['5층 제 3 엘리베이터 2호:505호'] = -1
+map['5층 제 3 엘리베이터 1호:5층 제 3 엘리베이터 2호'] = -1
+map['5층 제 3 계단:506호'] = -1
+map['506호:5층 제 3 엘리베이터 2호'] = -1
+map['507호:506호'] = -1
+map['511호:510호'] = -1
+map['5층 제 3 엘리베이터 2호:512호'] = -1
+map['512호:5층 제 3 엘리베이터 2호'] = -1
+map['5층 제 2 엘리베이터 2호:533호'] = -1
+map['5층 제 2 엘리베이터 1호:518호'] = -1
+map['534호:5층 제 2 엘리베이터 2호'] = -1
+map['519호:5층 제 2 엘리베이터 1호'] = -1
+map['526호:5층 아르테크네'] = -1
+map['526호:525호'] = -1
+map['5층 제 1 계단:525호'] = -1
+map['514호:503호'] = -1
+map['514호:504호'] = -1
+map['504호:513호'] = -1
+map['504호:514호'] = -1
+
+
+//우회전
+map['4층 제 3 엘리베이터 2호:406호'] = 1
+map['4층 제 3 엘리베이터 2호:4층 제 3 엘리베이터 1호'] = 1
+map['4층 제 3 엘리베이터 1호:410호'] = 1
+map['4층 제 3 엘리베이터 1호:411호'] = 1
+map['4층 제 3 엘리베이터 1호:411호 - KEA'] = 1
+map['4층 제 3 엘리베이터 1호:4층 제 4 계단'] = 1
+map['404호:4층 제 3 엘리베이터 2호'] = 1
+map['433호:4층 제 2 엘리베이터 2호'] = 1
+map['418호:4층 제 2 엘리베이터 1호'] = 1
+map['4층 아르테크네:426호'] = 1
+map['425호:426호'] = 1
+map['425호:4층 제 1 계단'] = 1
+map['4층 제 2 엘리베이터 2호:434호'] = 1
+map['409호:4층 제 3 엘리베이터 1호'] = 1
+
+
+
+map['5층 제 3 엘리베이터 2호:506호'] = 1
+map['5층 제 3 엘리베이터 2호:5층 제 3 엘리베이터 1호'] = 1
+map['5층 제 3 엘리베이터 1호:510호'] = 1
+map['5층 제 3 엘리베이터 1호:511호'] = 1
+map['5층 제 3 엘리베이터 1호:5층 제 4 계단'] = 1
+map['504호:5층 제 3 엘리베이터 2호'] = 1
+map['533호:5층 제 2 엘리베이터 2호'] = 1
+map['518호:5층 제 2 엘리베이터 1호'] = 1
+map['5층 아르테크네:526호'] = 1
+map['525호:526호'] = 1
+map['525호:5층 제 1 계단'] = 1
+map['513호:504호'] = 1
+map['513호:503호'] = 1
+map['503호:513호'] = 1
+map['503호:514호'] = 1
+map['509호:4층 제 3 엘리베이터 1호'] = 1
+
+
+
+
+function getPathDescription(start, end){
+// 다익스트라 알고리즘 실행
+const { distances, path, distancePath } = dijkstra(graph, start, end);
+//console.log("Distances:", distances);
+
+const direction = [];
+
+const description = [];
+
+for (let i = 0; i < path.length; i++) {
+  const node = path[i];
+  const nextNode = path[i + 1];
+
+  const key = node + ":" + nextNode;
+
+  const value = map[key] || 0;
+  direction[i] = value;
+
+  var direction_description = "";
+
+  if(value == 0){
+    direction_description = "직진";
+  }else if(value == 1){
+    direction_description = "우회전";
+  }else if(value == -1){
+    direction_description = "좌회전"
+  }
+  description[i] = node + " -> " + nextNode + " : "+direction_description
+
+  if (i + 1 === path.length - 1) {
+    break;
+  }
+}
+
+//console.log("------", distancePath, path, direction);
+return {distancePath, path, direction};
+}
 
 server.listen(port, () => { // Open server
     console.log(`Listening on http://localhost:${port}/`);
