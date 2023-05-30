@@ -9,5 +9,5 @@ crypto.pbkdf2(textPassword, randomSalt, 65536, 64, "sha512", (err, encryptedPass
         key: passwordWithSalt
     }
 
-    fs.writeFileSync('./password.json', JSON.stringify(password));
+    fs.writeFileSync('./src/password.json', JSON.stringify(password));
 });
