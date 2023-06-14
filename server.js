@@ -372,28 +372,28 @@ graph.addEdge("414호", "415호", 10);
 graph.addEdge("415호", "4층 제 5 계단", 10);
 graph.addEdge("4층 제 5 계단", "416호", 2);
 graph.addEdge("416호", "4층 제 5 계단", 4);
-graph.addEdge("416호", "417호", 3);
-graph.addEdge("417호", "418호", 3);
-graph.addEdge("418호", "419호", 3);
-graph.addEdge("419호", "420호", 3);
+graph.addEdge("416호", "417호", 3.3);
+graph.addEdge("417호", "418호", 3.3);
+graph.addEdge("418호", "419호", 3.3);
+graph.addEdge("419호", "420호", 3.3);
 graph.addEdge("419호", "4층 제 2 엘리베이터 1호", 5);
 
-graph.addEdge("421호", "422호", 3);
-graph.addEdge("423호", "424호", 3);
-graph.addEdge("424호", "425호", 3);
-graph.addEdge("425호", "4층 아르테크네", 3);
+graph.addEdge("421호", "422호", 3.3);
+graph.addEdge("423호", "424호", 3.3);
+graph.addEdge("424호", "425호", 3.3);
+graph.addEdge("425호", "4층 아르테크네", 3.3);
 graph.addEdge("4층 아르테크네", "4층 제 1 엘리베이터", 4);
 graph.addEdge("4층 제 1 엘리베이터", "4층 제 1 계단", 2);
 graph.addEdge("4층 제 1 계단", "426호", 1);
-graph.addEdge("426호", "427호", 3);
-graph.addEdge("427호", "428호", 3);
-graph.addEdge("428호", "429호", 3);
-graph.addEdge("429호", "430호", 3);
-graph.addEdge("430호", "431호", 3);
-graph.addEdge("431호", "432호", 3);
-graph.addEdge("432호", "433호", 3);
-graph.addEdge("433호", "434호", 3);
-graph.addEdge("434호", "435호", 3);
+graph.addEdge("426호", "427호", 3.3);
+graph.addEdge("427호", "428호", 3.3);
+graph.addEdge("428호", "429호", 3.3);
+graph.addEdge("429호", "430호", 3.3);
+graph.addEdge("430호", "431호", 3.3);
+graph.addEdge("431호", "432호", 3.3);
+graph.addEdge("432호", "433호", 3.3);
+graph.addEdge("433호", "434호", 3.3);
+graph.addEdge("434호", "435호", 3.3);
 graph.addEdge("435호", "4층 제 2 계단", 5);
 graph.addEdge("4층 제 2 계단", "435호", 3);
 graph.addEdge("4층 제 2 계단", "401호", 1);
@@ -580,17 +580,14 @@ graph.addEdge("525호", "5층 아르테크네", 3);
 graph.addEdge("5층 아르테크네", "5층 제 1 엘리베이터", 3);
 graph.addEdge("5층 제 1 엘리베이터", "5층 제 1 계단", 2);
 graph.addEdge("5층 제 1 계단", "526호", 1);
-graph.addEdge("526호", "527호", 3);
-graph.addEdge("527호", "528호", 3);
-graph.addEdge("528호", "529호", 3);
-graph.addEdge("529호", "530호", 3);
-graph.addEdge("530호", "531호", 3);
-graph.addEdge("531호", "532호", 3);
-graph.addEdge("532호", "533호", 3);
-graph.addEdge("533호", "534호", 3);
-graph.addEdge("534호", "535호", 3);
-graph.addEdge("535호", "5층 제 2 계단", 5);
-graph.addEdge("5층 제 2 계단", "535호", 3);
+graph.addEdge("526호", "527호", 3.3);
+graph.addEdge("527호", "528호", 5);
+graph.addEdge("528호", "529호", 3.3);
+graph.addEdge("529호", "530호", 5);
+graph.addEdge("530호", "531호", 3.3);
+graph.addEdge("531호", "532호", 3.5);
+graph.addEdge("532호", "5층 제 2 계단", 5)
+graph.addEdge("5층 제 2 계단", "532호", 3);
 graph.addEdge("5층 제 2 계단", "501호", 1);
 
 //화장실, 계단, 엘레베이터
@@ -942,11 +939,11 @@ function getPathDescription(start, end){
         value = "-1";
     }
 
-    console.log("----------------------" + map[key], value);
+    //console.log("----------------------" + map[key], value);
     direction[i] = value;
 
     var direction_description = "";
-    console.log("findDirection(node, nextNode)",findDirection(node, nextNode)+"ggfgfgfgfgf");    
+    //console.log("findDirection(node, nextNode)",findDirection(node, nextNode)+"ggfgfgfgfgf");    
 
     if(value == "1" || value == "-1" || findDirection(node, nextNode) == '0'){
 
