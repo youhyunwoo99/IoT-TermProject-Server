@@ -5,21 +5,85 @@ const path = require('path');
 const thread_num = 3;
 const a = 0.5;
 const k = 4
+var db_dataset = null;
 
+class PositionFinder {
+    constructor(){
+        this.first = true;
+        this.db_dataset = db_dataset; // Assign the class property to the variable
+
+    }
 
 // 위치 추정을 계산해주는 함수
-exports.findPosition = (req, res) => {
-    // 전달받은 값을 변수에 넣는다.
+findPosition = (req, res) => {
     let input_wifi_data = req.body.wifi_data;
-    let db = mysql.createConnection(db_config);
-    db.connect();
-    db.query('SELECT * FROM wifi_data', (err, db_data_arr) => { // db에서 저장된 모든 데이터셋 호출
-        if(err) {
-            return res.send({ msg: "error" });
-        }
-        db.end();
+
+    if(this.first == true){
+        // 전달받은 값을 변수에 넣는다.
+        let db = mysql.createConnection(db_config);
+        db.connect();
+        db.query('SELECT * FROM wifi_data', (err, db_data_arr) => { // db에서 저장된 모든 데이터셋 호출
+            if(err) {
+                return res.send({ msg: "error" });
+            }
+            db.end();
+
+            this.db_dataset = db_data_arr;
+
+            // db에 저장된 데이터는 db_data_arr 이라는 변수에 담겨서 온다
+            let splice_length = Math.ceil(db_data_arr.length / 3);
+
+            let test_result_arr = new Array();
+            let finish_thread_num = 0;
+
+            // 새로운 스레드를 호출하는 부분
+            // 사전에 정해진 스레드 개수만큼 데이터를 분할에 나눠서 연산을 진행하게 된다.
+            for(let i = 0;  i < thread_num; i += 1) {
+
+                let myWorker = new Worker(path.join(__dirname, './core-worker.js'));
+                myWorker.postMessage({
+                    db_data_arr: db_data_arr.splice(0, splice_length),
+                    input_wifi_data: input_wifi_data,
+                    a: a
+                });
+                
+                //INFO: 스레드로부터 데이터를 받음
+                myWorker.on('message', result => {
+                    // 각각의 스레드로부터 넘어온 배열 데이터를 합친다.
+                    test_result_arr.push(...result);
 
 
+                    // 모든 스레드로부터 값을 받았다면 다음으로 넘어간다.
+                    if(++finish_thread_num >= thread_num) {
+
+                        // 최대값을 기준으로 일정 범위 안에 있는 값만 추출
+                        test_result_arr.sort((obj1, obj2) => obj2.count - obj1.count);
+                        let largest_count = 0;
+                        if(test_result_arr[0]) largest_count = test_result_arr[0].count;
+
+                        let filtered_arr = new Array();
+                        for(let i = 0; test_result_arr[i] && test_result_arr[i].count > (largest_count * a); i++) {
+                            filtered_arr.push(test_result_arr[i]);
+                        }
+
+
+
+                        // 내림차순으로 정렬후 상위 4개를 뽑아 비교후 출력
+                        filtered_arr.sort((obj1, obj2) => obj1.ratio - obj2.ratio);
+                        let best_calc = this.ratioKNN(filtered_arr, k);
+
+                        
+                        //console.log(best_calc);
+                        return res.send({
+                            position: best_calc.position,
+                            k_count: best_calc.knn_count
+                        });
+                    }
+                });
+            }
+        });
+    }else{
+        var db_data_arr = this.db_dataset;
         // db에 저장된 데이터는 db_data_arr 이라는 변수에 담겨서 온다
         let splice_length = Math.ceil(db_data_arr.length / 3);
 
@@ -62,7 +126,7 @@ exports.findPosition = (req, res) => {
                     filtered_arr.sort((obj1, obj2) => obj1.ratio - obj2.ratio);
                     let best_calc = this.ratioKNN(filtered_arr, k);
 
-                    console.log(best_calc);
+                    //console.log(best_calc);
                     return res.send({
                         position: best_calc.position,
                         k_count: best_calc.knn_count
@@ -70,12 +134,13 @@ exports.findPosition = (req, res) => {
                 }
             });
         }
-    });
+        
+    }
 
 }
 
 
-exports.bruteForce = (db_data_arr, input_wifi_data, margin) => {
+bruteForce = (db_data_arr, input_wifi_data, margin) => {
     // 아래는 추정한 위치를 담을 변수들 선언
     let best_calc = {
         id: 0,
@@ -127,7 +192,7 @@ exports.bruteForce = (db_data_arr, input_wifi_data, margin) => {
     return best_calc;
 }
 
-exports.bruteForceWithRatio = (db_data_arr, input_wifi_data, a) => {
+bruteForceWithRatio = (db_data_arr, input_wifi_data, a) => {
     // 아래는 추정한 위치를 담을 변수들 선언
     let best_calc = {
         id: 0,
@@ -201,7 +266,7 @@ exports.bruteForceWithRatio = (db_data_arr, input_wifi_data, a) => {
     return best_calc;
 }
 
-exports.ratioKNN = (result_list, k) => {
+ratioKNN = (result_list, k) => {
     let calc_top_list = new Array();
     for(let i = 0; i < k && i < result_list.length; i++) {
         if(calc_top_list[result_list[i].position]) {
@@ -233,10 +298,14 @@ exports.ratioKNN = (result_list, k) => {
 }
 
 
-exports.bruteForceWithRatioKNN = (db_data_arr, input_wifi_data, a, k) => {
+bruteForceWithRatioKNN = (db_data_arr, input_wifi_data, a, k) => {
     let res = exports.bruteForceWithRatio(db_data_arr, input_wifi_data, a);
 
     let best_calc = exports.ratioKNN(res.calc_top_list, k);
 
     return best_calc;
 }
+}
+
+module.exports = new PositionFinder();
+
